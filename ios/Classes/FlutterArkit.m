@@ -91,8 +91,6 @@
       [self updateSingleProperty:call andResult:result];
   } else if ([[call method] isEqualToString:@"updateMaterials"]) {
       [self updateMaterials:call andResult:result];
-  } else if ([[call method] isEqualToString:@"updateFaceGeometry"]) {
-      [self updateFaceGeometry:call andResult:result];
   } else if ([[call method] isEqualToString:@"getLightEstimate"]) {
       [self onGetLightEstimate:call andResult:result];
   } else if ([[call method] isEqualToString:@"projectPoint"]) {
@@ -161,10 +159,6 @@
             _configuration = worldTrackingConfiguration;
         }
     } else if (configurationType == 1) {
-        if (ARFaceTrackingConfiguration.isSupported) {
-            ARFaceTrackingConfiguration* faceTrackingConfiguration = [ARFaceTrackingConfiguration new];
-            _configuration = faceTrackingConfiguration;
-        }
     } else if (configurationType == 2) {
         if (ARImageTrackingConfiguration.isSupported) {
             ARImageTrackingConfiguration* imageTrackingConfiguration = [ARImageTrackingConfiguration new];
@@ -338,17 +332,6 @@
     SCNNode* node = [self.sceneView.scene.rootNode childNodeWithName:name recursively:YES];
     SCNGeometry* geometry = [GeometryBuilder createGeometry:call.arguments withDevice: _sceneView.device];
     node.geometry = geometry;
-    result(nil);
-}
-
-- (void) updateFaceGeometry:(FlutterMethodCall*)call andResult:(FlutterResult)result{
-    NSString* name = call.arguments[@"name"];
-    SCNNode* node = [self.sceneView.scene.rootNode childNodeWithName:name recursively:YES];
-    ARSCNFaceGeometry* geometry = (ARSCNFaceGeometry*)node.geometry;
-    ARFaceAnchor* faceAnchor = [self findAnchor:call.arguments[@"fromAnchorId"] inArray:self.sceneView.session.currentFrame.anchors];
-    
-    [geometry updateFromFaceGeometry:faceAnchor.geometry];
-    
     result(nil);
 }
 
