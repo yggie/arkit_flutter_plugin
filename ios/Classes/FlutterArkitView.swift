@@ -4,6 +4,8 @@ import ARKit
 class FlutterArkitView: NSObject, FlutterPlatformView {
     let sceneView: ARSCNView
     let channel: FlutterMethodChannel
+    var result: FlutterResult!
+    var imagePath: String!
     
     var forceTapOnCenter: Bool = false
     var configuration: ARConfiguration? = nil
@@ -20,7 +22,7 @@ class FlutterArkitView: NSObject, FlutterPlatformView {
     
     func view() -> UIView { return sceneView }
     
-    func onMethodCalled(_ call :FlutterMethodCall, _ result:FlutterResult) {
+    func onMethodCalled(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? Dictionary<String, Any>
         
         if configuration == nil && call.method != "init" {
@@ -104,14 +106,65 @@ class FlutterArkitView: NSObject, FlutterPlatformView {
         case "cameraEulerAngles":
             onCameraEulerAngles(result)
             break
+
         case "snapshot":
             onGetSnapshot(result)
+            break
+
+        case "captureImage":
+            UIGraphicsBeginImageContextWithOptions(self.sceneView.bounds.size, false, UIScreen.main.scale)
+
+            self.sceneView.drawHierarchy(in: self.sceneView.bounds, afterScreenUpdates: true)
+
+            let optionalImage: UIImage? = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+
+            guard let image = optionalImage else {
+                result("No image produced from context")
+                return
+            }
+
+            guard let imageData = image.pngData() else {
+                result("Cannot retrieve image PNG")
+                return
+            }
+
+            let paths: [URL] = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+
+            guard let dir = paths.first else {
+                result("No paths for app")
+                return
+            }
+
+            guard let filename = arguments!["filename"] as! String? else {
+                result("filename is required")
+                return
+            }
+
+            let path = dir.appendingPathComponent(filename)
+            guard let _ = try? imageData.write(to: path) else {
+                result("Image cannot be written")
+                return
+            }
+
+            self.result = result
+            self.imagePath = path.path
+            UIImageWriteToSavedPhotosAlbum(image, self, #selector(savedToGalleryDone), nil)
             break
         default:
             result(FlutterMethodNotImplemented)
             break
         }
     }
+
+    @objc
+    func savedToGalleryDone(image: UIImage, error: NSError?, contextInfo: UnsafeMutableRawPointer?) {
+        if error == nil && self.imagePath != nil && !self.imagePath.isEmpty {
+            self.result(self.imagePath)
+        } else {
+            self.result("There was an issue")
+        }
+    } // savedToGalleryDone()
     
     func onDispose(_ result:FlutterResult) {
         sceneView.session.pause()

@@ -721,4 +721,14 @@ class ARKitController {
         as FutureOr<Uint8List>);
     return MemoryImage(result);
   }
+
+  Future<String?> captureImage({String? filename = null}) {
+    return _channel.invokeMethod<String?>('captureImage', {
+      'filename': filename == null ? defaultImageFilename() : filename,
+    });
+  }
+}
+
+String defaultImageFilename() {
+  return 'arkit-capture-${DateTime.now().toIso8601String()}';
 }
